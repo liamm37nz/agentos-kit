@@ -40,10 +40,12 @@ These come from the contract and the platform's security model. Do not trade the
 6. **The platform owns the container.** No privileged mode, host networking, extra capabilities or host mounts beyond `/data` and declared `shared` paths. Apps run as uid 10001. Don't work around this; change the design.
 7. **Platform first, never improvise on the host.** Deploys happen by pushing to `main`. Don't `docker run` apps by hand, edit generated compose files, or write into `/srv/agentos/secrets`. The platform repo's `AGENTS.md` lists the few sanctioned host commands.
 8. **Never disturb what's already running** (other apps, or the project you're migrating) without the user agreeing to the specific step.
+9. **Apps are isolated.** Every app must use the request guard (`platform.install(app)` in Python): anything that didn't come through AgentOS is rejected. Apps never read each other's `/data` or share databases. If one app needs another's data, the provider offers a scope (`provides`), the consumer requests it (`uses`), and the owner grants it on the **Connections** page — see [references/new-app.md](references/new-app.md#connections-to-other-apps).
 
 ## Before finishing any change to an app
 
-- [ ] `agentos.yaml` matches the code: jobs, secrets (also `REQUIRED_SECRETS` in Python apps), `network`, `egress`, `shared`
+- [ ] `agentos.yaml` matches the code: jobs, secrets (also `REQUIRED_SECRETS` in Python apps), `network`, `egress`, `shared`, `provides`, `uses`
+- [ ] The vendored `agentos_platform.py` matches the installed kit's template, and the app calls `platform.install(app)`
 - [ ] `AGENTS.md` is current and under ~100 lines; `ARCHITECTURE.md` updated if the design changed; README run instructions work
 - [ ] Tests pass, including new behaviour
 - [ ] `agentos check .` passes
