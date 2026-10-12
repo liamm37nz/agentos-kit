@@ -93,3 +93,27 @@ def test_live_check_catches_wrong_token(running_template):
 def test_contract_command(capsys):
     assert main(["contract"]) == 0
     assert "# AgentOS App Contract" in capsys.readouterr().out
+
+
+def test_live_check_rejects_app_without_guard(tmp_path):
+    """An app that only includes the router (the pre-guard way) fails the live check."""
+    root = tmp_path / "old"
+    shutil.copytree(TEMPLATE, root)
+    main_py = root / "app" / "main.py"
+    main_py.write_text(main_py.read_text().replace("platform.install(app)", "app.include_router(platform.router)"))
+    port = _free_port()
+    env = {"AGENTOS_TOKEN": "t", "AGENTOS_BASE_PATH": "/apps/template-app", "DATA_DIR": str(tmp_path), "PATH": ""}
+    proc = subprocess.Popen([sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(port)], cwd=root, env=env,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        for _ in range(100):
+            try:
+                httpx.get(f"http://127.0.0.1:{port}/platform/health", timeout=0.5)
+                break
+            except httpx.HTTPError:
+                time.sleep(0.1)
+        found = "\n".join(errors(check_live(f"http://127.0.0.1:{port}", "t", mf.load(root / "agentos.yaml"))))
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+    assert "use platform.install(app)" in found

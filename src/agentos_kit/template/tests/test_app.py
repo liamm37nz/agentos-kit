@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 TOKEN = "test-token"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
+PROXY = {"X-AgentOS-Proxy-Token": TOKEN}  # what AgentOS's proxy adds to UI requests
 MANIFEST = yaml.safe_load((Path(__file__).parent.parent / "agentos.yaml").read_text())
 BASE = f"/apps/{MANIFEST['id']}"
 
@@ -64,9 +65,16 @@ def test_unknown_job_and_run(client):
 
 
 def test_ui_served_under_base_path(client):
-    r = client.get(BASE + "/", headers={"X-AgentOS-User": "liam"})
+    r = client.get(BASE + "/", headers={**PROXY, "X-AgentOS-User": "liam"})
     assert r.status_code == 200
     assert "Hello, liam" in r.text
+
+
+def test_requests_not_from_agentos_are_rejected(client):
+    # e.g. another app on the internal network forging the user header
+    assert client.get(BASE + "/", headers={"X-AgentOS-User": "liam"}).status_code == 401
+    assert client.get(BASE + "/", headers={"X-AgentOS-Proxy-Token": "wrong"}).status_code == 401
+    assert client.get("/anything-else").status_code == 401
 
 
 def test_code_jobs_match_manifest(app_module):

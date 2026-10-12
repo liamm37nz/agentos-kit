@@ -1,6 +1,6 @@
 [project]
 name = "agentos-kit"
-version = "0.1.0"
+version = "0.2.0"
 description = "AgentOS app contract tooling: manifest schema, agentos check, and the app template"
 requires-python = ">=3.11"
 dependencies = [

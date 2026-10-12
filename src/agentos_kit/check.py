@@ -129,11 +129,23 @@ def check_live(base_url: str, token: str, manifest: dict[str, Any], *, timeout: 
         if r is not None and r.status_code != 404:
             err(f"GET /platform/runs/<unknown>: expected 404, got {r.status_code}")
 
+        # The guard: nothing but /platform/* may answer without the proxy token (CONTRACT §4).
+        probe = f"/apps/{manifest['id']}/"
+        for headers, label in (({"X-AgentOS-User": "intruder"}, "no proxy token"),
+                               ({"X-AgentOS-Proxy-Token": "wrong-" + secrets.token_hex(4)}, "wrong proxy token")):
+            for path in (probe, "/"):
+                r = get(path, headers=headers)
+                if r is not None and r.status_code != 401:
+                    err(f"GET {path} with {label}: expected 401, got {r.status_code} — use platform.install(app) so only requests via AgentOS get through")
+        for item in manifest.get("provides", []):
+            r = get(f"/connect/{item['id']}/", headers={"Authorization": "Bearer not-granted-" + secrets.token_hex(4)})
+            if r is not None and r.status_code != 401:
+                err(f"GET /connect/{item['id']}/ with an ungranted token: expected 401, got {r.status_code}")
+
         if manifest.get("ui", True):
-            base_path = f"/apps/{manifest['id']}/"
-            r = get(base_path, follow_redirects=True)
+            r = get(probe, headers={"X-AgentOS-Proxy-Token": token}, follow_redirects=True)
             if r is not None and r.status_code != 200:
-                err(f"UI: GET {base_path} expected 200, got {r.status_code} (serve the UI under AGENTOS_BASE_PATH)")
+                err(f"UI: GET {probe} via the proxy expected 200, got {r.status_code} (serve the UI under AGENTOS_BASE_PATH)")
 
     return findings
 

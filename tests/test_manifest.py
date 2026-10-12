@@ -58,6 +58,9 @@ def test_label_round_trip():
         ({"jobs": [{"id": "a1", "name": "A", "schedule": "@daily"}]}, "jobs.0.schedule"),
         ({"jobs": [{"id": "a1", "name": "A", "schedule": "0 9 * * MON"}]}, "unsupported value"),
         ({"memory": "512"}, "memory"),
+        ({"provides": [{"id": "tx", "description": "a"}, {"id": "tx", "description": "b"}]}, "duplicate id 'tx'"),
+        ({"uses": [{"app": "gst", "scope": "tx", "reason": "r"}]}, "connect to itself"),
+        ({"uses": [{"app": "bank", "scope": "tx"}]}, "'reason' is a required property"),
     ],
 )
 def test_invalid_manifests(changes, expected):
@@ -72,3 +75,10 @@ def test_network_none_needs_no_egress():
 def test_parse_reports_bad_yaml():
     with pytest.raises(mf.ManifestError, match="invalid YAML"):
         mf.parse("spec: [")
+
+
+def test_provides_and_uses_defaults():
+    m = mf.with_defaults(variant(provides=[{"id": "transactions", "description": "Read transactions"}],
+                                 uses=[{"app": "bank-sync", "scope": "transactions", "reason": "GST needs them"}]))
+    assert mf.validate(m) == []
+    assert m["uses"][0]["optional"] is False

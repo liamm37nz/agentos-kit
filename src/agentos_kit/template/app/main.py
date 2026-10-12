@@ -55,7 +55,7 @@ def status() -> dict:
 platform = Platform(health=health, status=status, jobs={"say-hello": say_hello})
 
 app = FastAPI(title="Template App", docs_url=None, redoc_url=None, openapi_url=None)
-app.include_router(platform.router)
+platform.install(app)  # /platform API + guard: only requests via AgentOS get through
 
 
 @app.get(BASE_PATH, include_in_schema=False)

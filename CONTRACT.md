@@ -22,7 +22,7 @@ What an app must do to run on AgentOS. The platform talks to apps only through t
 |---|---|---|
 | `agentos.yaml` | yes | Manifest (§3) |
 | `Dockerfile` | yes | Serves on `$PORT`; works as uid 10001 |
-| `AGENTS.md` | yes | §6 |
+| `AGENTS.md` | yes | §7 |
 | `CLAUDE.md` | yes | Contains `@AGENTS.md` |
 | `README.md` | yes | What it is, how to run it locally |
 | `.github/workflows/agentos.yml` | yes | Calls the kit's reusable build workflow |
@@ -66,6 +66,16 @@ egress:                      # required when network is internet
   - host: api.anthropic.com
     purpose: Classify transactions
     data: merchant name, amount, date — no account numbers or names
+
+provides:                    # optional; APIs other apps may be granted (§6)
+  - id: returns
+    description: Read prepared GST returns
+
+uses:                        # optional; connections this app needs (§6)
+  - app: bank-sync
+    scope: transactions
+    reason: Classify transactions for each GST period
+    optional: false          # default false: the app isn't deployed until the owner grants it
 ```
 
 - Schema: [`src/agentos_kit/schema/agentos-v1.json`](src/agentos_kit/schema/agentos-v1.json).
@@ -94,10 +104,16 @@ Apps must:
 - run as uid:gid `10001:10001` (the platform enforces it)
 - log to stdout/stderr
 - serve their UI under `AGENTOS_BASE_PATH` — the full path is forwarded, the prefix is not stripped
-- serve `/platform/*` at the root path; it is reachable only from the platform
+- serve `/platform/*` at the root path
 - become healthy within 60 seconds
 - start even when secrets are missing, and report `degraded` (CI starts the app without secrets)
-- trust the `X-AgentOS-User` header as the logged-in user; apps do no authentication of their own
+- **reject every request that didn't come through the platform** (other apps share the internal network):
+  - `/platform/*` requires `Authorization: Bearer $AGENTOS_TOKEN`
+  - `/connect/<scope>/*` requires a connection token granted for `<scope>` (§6)
+  - everything else requires the header `X-AgentOS-Proxy-Token: $AGENTOS_TOKEN`, which the platform's proxy adds; answer `401` otherwise
+- only then trust `X-AgentOS-User` as the logged-in user; apps do no authentication of their own
+
+The Python helper does all of this: `platform.install(app)`.
 
 The platform forbids privileged mode, host networking, added capabilities, and host mounts other than `/data` and declared `shared` paths.
 
@@ -134,7 +150,28 @@ The template implements all of this in one vendored file, `app/agentos_platform.
 
 ---
 
-## 6. Documentation
+## 6. Connections between apps
+
+Apps never read each other's `/data`. One app offers an API; another is granted access by the owner.
+
+**Provider** declares `provides: [{id, description}]` and serves those APIs under `/connect/<id>/…` at the root path (not under the base path). The platform gives it `AGENTOS_CONNECT_CLIENTS`: a JSON map of `sha256(token)` → `{"app": <caller id>, "scopes": [...]}`. Requests without a token granted for that scope get `401`. With the helper, the guard does this and `caller(request)` returns the calling app's id.
+
+Rules for providers:
+- Read-only by default. A scope that changes data must say so in its description, and must not let a caller trigger irreversible external actions.
+- Return only what the scope's description promises. Callers are other apps, possibly processing untrusted input.
+
+**Consumer** declares `uses: [{app, scope, reason, optional}]`. When granted, it gets `AGENTOS_CONNECT_<APP>_URL` (e.g. `http://agentos-bank-sync:8080/connect`) and `AGENTOS_CONNECT_<APP>_TOKEN`, with `<APP>` upper-cased and `-` → `_`. Helper: `connection("bank-sync")` → `(url, token)` or `None`.
+
+```python
+url, token = connection("bank-sync")
+r = httpx.get(f"{url}/transactions/?from=2026-08-01", headers={"Authorization": f"Bearer {token}"})
+```
+
+- The owner grants and revokes in the control plane's **Connections** page. A required (`optional: false`) connection that isn't granted holds the deploy, like a missing secret.
+- Granting or revoking restarts both apps with new settings; revoking rotates the token.
+- Don't call providers from `/platform/health`. If a provider is down, report it through `/platform/status` (`attention`), not by failing health.
+
+## 7. Documentation
 
 `AGENTS.md` is read at the start of every coding-agent session. Keep it under about 100 lines. Required headings:
 
@@ -156,7 +193,7 @@ Rules for coding agents:
 
 ---
 
-## 7. Build and deploy
+## 8. Build and deploy
 
 The app's workflow calls `liamm37nz/agentos-kit/.github/workflows/build.yml`. On every push and pull request it runs `agentos check`, the tests, builds the image, starts it without secrets, and runs `agentos check --live` against it. On push to `main` it publishes `ghcr.io/<owner>/<repo>:main` and `:<git-sha>`.
 

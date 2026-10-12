@@ -73,6 +73,16 @@ def validate(data: Any) -> list[str]:
     for dup in sorted({m for m in mounts if mounts.count(m) > 1}):
         errors.append(f"shared: duplicate mount {dup!r}")
 
+    provided = [x["id"] for x in data.get("provides", [])]
+    for dup in sorted({x for x in provided if provided.count(x) > 1}):
+        errors.append(f"provides: duplicate id {dup!r}")
+    used = [(u["app"], u["scope"]) for u in data.get("uses", [])]
+    for app, scope in sorted({u for u in used if used.count(u) > 1}):
+        errors.append(f"uses: duplicate {app}/{scope}")
+    for app, _ in used:
+        if app == data["id"]:
+            errors.append("uses: an app can't connect to itself")
+
     if data["network"] == "internet" and not data.get("egress"):
         errors.append("egress: required when network is 'internet' — document every external host")
     return errors
@@ -83,13 +93,15 @@ def with_defaults(data: dict[str, Any]) -> dict[str, Any]:
     out.setdefault("port", 8080)
     out.setdefault("ui", True)
     out.setdefault("memory", "512m")
-    for key in ("jobs", "secrets", "shared", "egress"):
+    for key in ("jobs", "secrets", "shared", "egress", "provides", "uses"):
         out.setdefault(key, [])
     for job in out["jobs"]:
         job.setdefault("catch_up", "skip")
         job.setdefault("timeout", "30m")
     for item in out["shared"]:
         item.setdefault("rw", False)
+    for item in out["uses"]:
+        item.setdefault("optional", False)
     return out
 
 
