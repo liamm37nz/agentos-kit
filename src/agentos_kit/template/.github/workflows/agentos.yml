@@ -1,0 +1,14 @@
+name: agentos
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    uses: liamm37nz/agentos-kit/.github/workflows/build.yml@main

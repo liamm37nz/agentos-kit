@@ -1,0 +1,32 @@
+# CI for the kit itself: unit tests, then build the template as an app and live-check it.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+
+      - name: Template passes the static check
+        run: agentos check src/agentos_kit/template
+
+      - name: Template image passes the live check
+        working-directory: src/agentos_kit/template
+        run: |
+          docker build --label "agentos.manifest=$(agentos label agentos.yaml)" -t template:ci .
+          docker run -d --name app --user 10001:10001 -e AGENTOS_TOKEN=t -e AGENTOS_BASE_PATH=/apps/template-app -p 127.0.0.1:18080:8080 template:ci
+          for i in $(seq 1 60); do curl -fsS -o /dev/null -H "Authorization: Bearer t" http://127.0.0.1:18080/platform/health && break; sleep 1; done
+          agentos check . --live http://127.0.0.1:18080 --token t || { docker logs app; exit 1; }

@@ -1,0 +1,14 @@
+spec: agentos/v1
+id: template-app
+name: Template App
+description: Minimal AgentOS app. Replace this description with what your app does.
+
+network: none
+ui: true
+
+jobs:
+  - id: say-hello
+    name: Say hello
+    schedule: "0 9 * * *"
+    catch_up: skip
+    timeout: 1m

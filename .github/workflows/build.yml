@@ -1,0 +1,84 @@
+# Reusable build for AgentOS apps (CONTRACT.md §7). Apps call it from .github/workflows/agentos.yml.
+name: agentos-build
+
+on:
+  workflow_call:
+    inputs:
+      test-command:
+        type: string
+        default: pytest -q
+      python-version:
+        type: string
+        default: "3.12"
+      kit-ref:
+        description: agentos-kit git ref to check against
+        type: string
+        default: main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      CI_TOKEN: ci-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install agentos-kit
+        run: pip install "agentos-kit @ git+https://github.com/liamm37nz/agentos-kit@${{ inputs.kit-ref }}"
+
+      - name: Check repo against the contract
+        run: agentos check .
+
+      - name: Test
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          ${{ inputs.test-command }}
+
+      - name: Build image
+        run: |
+          docker build \
+            --label "agentos.manifest=$(agentos label agentos.yaml)" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            -t agentos-app:ci .
+
+      - name: Start app as the platform would (no secrets)
+        run: |
+          read -r APP_ID APP_PORT < <(python -c 'import json,sys; m=json.loads(sys.argv[1]); print(m["id"], m["port"])' "$(agentos label agentos.yaml)")
+          docker run -d --name app --user 10001:10001 \
+            -e AGENTOS_TOKEN="$CI_TOKEN" -e AGENTOS_APP_ID="$APP_ID" -e AGENTOS_BASE_PATH="/apps/$APP_ID" \
+            -e PORT="$APP_PORT" -e TZ=Pacific/Auckland \
+            -p "127.0.0.1:18080:$APP_PORT" agentos-app:ci
+          for i in $(seq 1 60); do
+            if curl -fsS -o /dev/null -H "Authorization: Bearer $CI_TOKEN" http://127.0.0.1:18080/platform/health; then
+              echo "healthy after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "app did not answer /platform/health within 60s"; exit 1
+
+      - name: Check running app against the contract
+        run: agentos check . --live http://127.0.0.1:18080 --token "$CI_TOKEN"
+
+      - name: App logs
+        if: always()
+        run: docker logs app 2>&1 | tail -100 || true
+
+      - name: Publish to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag agentos-app:ci "$IMAGE:${{ github.sha }}"
+          docker tag agentos-app:ci "$IMAGE:main"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:main"
+          echo "Published $IMAGE:main (${{ github.sha }})" >> "$GITHUB_STEP_SUMMARY"

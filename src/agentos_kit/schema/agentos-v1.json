@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/liamm37nz/agentos-kit/schema/agentos-v1.json",
+  "title": "AgentOS app manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec", "id", "name", "description", "network"],
+  "properties": {
+    "spec": { "const": "agentos/v1" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,38}[a-z0-9]$",
+      "description": "Stable app id: lowercase letters, digits and hyphens, 2-40 chars."
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "port": { "type": "integer", "minimum": 1024, "maximum": 65535, "default": 8080 },
+    "ui": { "type": "boolean", "default": true },
+    "network": { "enum": ["internet", "none"] },
+    "memory": { "type": "string", "pattern": "^[1-9][0-9]*[mg]$", "default": "512m" },
+    "jobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,38}[a-z0-9]$" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "schedule": {
+            "type": "string",
+            "pattern": "^\\s*\\S+(\\s+\\S+){4}\\s*$",
+            "description": "Standard 5-field cron expression in the platform time zone."
+          },
+          "catch_up": { "enum": ["once", "skip"], "default": "skip" },
+          "timeout": { "type": "string", "pattern": "^[1-9][0-9]*[smh]$", "default": "30m" }
+        }
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "description": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "shared": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "mount"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "mount": { "type": "string", "pattern": "^/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$" },
+          "rw": { "type": "boolean", "default": false }
+        }
+      }
+    },
+    "egress": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["host", "purpose"],
+        "properties": {
+          "host": { "type": "string", "minLength": 1 },
+          "purpose": { "type": "string", "minLength": 1 },
+          "data": { "type": "string" }
+        }
+      }
+    }
+  }
+}
