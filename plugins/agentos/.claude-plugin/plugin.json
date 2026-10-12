@@ -1,0 +1,6 @@
+{
+  "name": "agentos",
+  "description": "Build new AgentOS apps, migrate existing projects onto AgentOS, and operate them",
+  "author": { "name": "Liam Mackie" },
+  "repository": "https://github.com/liamm37nz/agentos-kit"
+}

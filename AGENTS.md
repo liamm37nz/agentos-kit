@@ -18,6 +18,7 @@ Public half of AgentOS: the app contract (CONTRACT.md), manifest JSON Schema, `a
 - `src/agentos_kit/check.py`: static and live checks
 - `src/agentos_kit/template/`: the app template copied by `agentos new` (ids `template-app` / `Template App` are replaced)
 - `.github/workflows/build.yml`: reusable workflow called by apps; `ci.yml` tests the kit
+- `.claude-plugin/marketplace.json` + `plugins/agentos/`: the `agentos` skill as a Claude Code plugin (Codex uses the same `SKILL.md`). Validate with `claude plugin validate .`
 
 # Data and secrets
 None. The build workflow only uses the caller's `GITHUB_TOKEN` to push to GHCR.
@@ -25,3 +26,5 @@ None. The build workflow only uses the caller's `GITHUB_TOKEN` to push to GHCR.
 # Notes
 - Apps call `build.yml@main`, so a push here affects every app's next build. Run the tests first.
 - `template/app/agentos_platform.py` is vendored into each app; apps update it by copying the new version.
+- The skill must stay generic (public repo): host-specific steps live in the private platform repo's AGENTS.md, which the skill tells agents to read. Keep SKILL.md short; detail goes in `references/`.
+- `plugin.json` deliberately has no `version`, so installs track the latest commit.

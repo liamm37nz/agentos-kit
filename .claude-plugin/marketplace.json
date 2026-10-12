@@ -1,0 +1,12 @@
+{
+  "name": "agentos-kit",
+  "description": "Skills for building, migrating and operating apps on AgentOS",
+  "owner": { "name": "Liam Mackie", "url": "https://github.com/liamm37nz" },
+  "plugins": [
+    {
+      "name": "agentos",
+      "source": "./plugins/agentos",
+      "description": "Build new AgentOS apps, migrate existing projects onto AgentOS, and operate them"
+    }
+  ]
+}

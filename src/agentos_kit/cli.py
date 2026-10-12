@@ -27,6 +27,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--live", metavar="URL", help="also probe a running app, e.g. http://localhost:8080")
     p.add_argument("--token", help="AGENTOS_TOKEN the running app was started with (required with --live)")
 
+    sub.add_parser("contract", help="print the AgentOS app contract (CONTRACT.md) for this kit version")
+
     p = sub.add_parser("label", help="print the agentos.manifest image label value")
     p.add_argument("path", nargs="?", default="agentos.yaml")
 
@@ -36,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--dir", help="target directory (default: ./<id>)")
 
     args = parser.parse_args(argv)
-    return {"check": _check, "label": _label, "new": _new}[args.cmd](args)
+    return {"check": _check, "contract": _contract, "label": _label, "new": _new}[args.cmd](args)
 
 
 def _check(args) -> int:
@@ -59,6 +61,17 @@ def _check(args) -> int:
     scope = "repo + live app" if args.live else "repo"
     print(f"\nagentos check ({scope}): {'FAILED' if errors else 'passed'} — {errors} error(s), {warnings} warning(s)")
     return 1 if errors else 0
+
+
+def _contract(args) -> int:
+    packaged = resources.files("agentos_kit").joinpath("CONTRACT.md")
+    source = Path(__file__).resolve().parents[2] / "CONTRACT.md"  # editable install / repo checkout
+    for candidate in (packaged, source):
+        if candidate.is_file():
+            print(candidate.read_text())
+            return 0
+    print("error: CONTRACT.md not found in this installation", file=sys.stderr)
+    return 1
 
 
 def _label(args) -> int:

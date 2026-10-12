@@ -88,3 +88,8 @@ def test_live_check_catches_wrong_token(running_template):
     manifest = mf.load(TEMPLATE / "agentos.yaml")
     found = "\n".join(errors(check_live(running_template, "not-the-token", manifest)))
     assert "/platform/health: expected 200, got 401" in found
+
+
+def test_contract_command(capsys):
+    assert main(["contract"]) == 0
+    assert "# AgentOS App Contract" in capsys.readouterr().out
