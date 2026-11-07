@@ -75,3 +75,15 @@ def test_connection_helper_reads_env(monkeypatch):
 def test_template_own_tests_pass():
     r = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider"], cwd=TEMPLATE, capture_output=True, text=True)
     assert r.returncode == 0, r.stdout[-2000:]
+
+
+def test_embedded_and_nav_script():
+    from starlette.requests import Request
+
+    def req(headers):
+        return Request({"type": "http", "headers": [(k.lower().encode(), v.encode()) for k, v in headers.items()]})
+
+    assert ap.embedded(req({"Sec-Fetch-Dest": "iframe"})) is True
+    assert ap.embedded(req({"Sec-Fetch-Dest": "document"})) is False
+    assert ap.embedded(req({})) is False
+    assert 'type:"agentos:location"' in ap.NAV_SCRIPT and "window.parent===window" in ap.NAV_SCRIPT

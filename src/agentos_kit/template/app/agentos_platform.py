@@ -11,6 +11,10 @@ The guard rejects every request that didn't come through the platform:
   everything else     needs the `X-AgentOS-Proxy-Token` header the platform's proxy adds
 Only then is `X-AgentOS-User` trustworthy.
 
+Inside AgentOS the app is shown in a frame under the AgentOS header, which renders the app's menu from
+`nav:` in agentos.yaml. So when `embedded(request)` is true, don't draw your own header/menu; and put
+`NAV_SCRIPT` on every page so the AgentOS header highlights the right menu item as the user navigates.
+
 Job functions receive a JobContext and run in a background thread. Return a final
 message (or None) to succeed; raise to fail. Runs are kept in memory, so a restart
 forgets them and the platform records any in-flight run as failed.
@@ -172,6 +176,19 @@ class Platform:
         if run is None:
             raise HTTPException(status_code=404, detail="unknown run")
         return run.as_dict()
+
+
+def embedded(request: Request) -> bool:
+    """True when this page is loaded inside the AgentOS frame (browsers send `Sec-Fetch-Dest: iframe`).
+
+    Opened on its own (e.g. "Open in new tab") it is False — then show your own menu as usual.
+    """
+    return request.headers.get("sec-fetch-dest", "").lower() == "iframe"
+
+
+# Include on every HTML page (e.g. just before </body>). Tells the AgentOS header which page is showing,
+# so it can highlight the matching `nav:` item. Sends only the path; does nothing when not in a frame.
+NAV_SCRIPT = """<script>(function(){if(window.parent===window)return;function s(){try{window.parent.postMessage({type:"agentos:location",path:location.pathname+location.search},location.protocol+"//"+location.hostname)}catch(e){}}s();window.addEventListener("popstate",s);})();</script>"""
 
 
 def caller(request: Request) -> str:

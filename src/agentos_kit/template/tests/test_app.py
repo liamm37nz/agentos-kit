@@ -83,3 +83,15 @@ def test_code_jobs_match_manifest(app_module):
 
 def test_code_secrets_match_manifest(app_module):
     assert set(app_module.REQUIRED_SECRETS) == {s["name"] for s in MANIFEST.get("secrets", [])}
+
+
+def test_own_header_only_when_not_embedded(client):
+    alone = client.get(BASE + "/", headers=PROXY).text
+    framed = client.get(BASE + "/", headers={**PROXY, "Sec-Fetch-Dest": "iframe"}).text
+    assert '<header class="own">' in alone and '<header class="own">' not in framed
+    assert "agentos:location" in framed  # tells the AgentOS header which page is showing
+
+
+def test_nav_paths_exist(client):
+    for item in MANIFEST.get("nav", []):
+        assert client.get(BASE + item["path"], headers=PROXY).status_code == 200, item

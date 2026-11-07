@@ -40,6 +40,30 @@
       "type": "boolean",
       "default": true
     },
+    "nav": {
+      "type": "array",
+      "maxItems": 8,
+      "description": "The app's menu, shown in the AgentOS header. Paths are relative to the app's base path.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "path"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^/[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*$"
+          }
+        }
+      }
+    },
     "network": {
       "enum": [
         "internet",

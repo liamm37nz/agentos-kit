@@ -73,6 +73,16 @@ def validate(data: Any) -> list[str]:
     for dup in sorted({m for m in mounts if mounts.count(m) > 1}):
         errors.append(f"shared: duplicate mount {dup!r}")
 
+    for i, item in enumerate(data.get("nav", [])):
+        path = item["path"]
+        if path.startswith("//") or ".." in path or "\\" in path:
+            errors.append(f"nav.{i}.path: {path!r} must be a plain path under the app (no '//' or '..')")
+    if data.get("nav") and data.get("ui") is False:
+        errors.append("nav: only apps with ui: true have a menu")
+    labels = [x["label"] for x in data.get("nav", [])]
+    for dup in sorted({x for x in labels if labels.count(x) > 1}):
+        errors.append(f"nav: duplicate label {dup!r}")
+
     provided = [x["id"] for x in data.get("provides", [])]
     for dup in sorted({x for x in provided if provided.count(x) > 1}):
         errors.append(f"provides: duplicate id {dup!r}")
@@ -93,7 +103,7 @@ def with_defaults(data: dict[str, Any]) -> dict[str, Any]:
     out.setdefault("port", 8080)
     out.setdefault("ui", True)
     out.setdefault("memory", "512m")
-    for key in ("jobs", "secrets", "shared", "egress", "provides", "uses"):
+    for key in ("nav", "jobs", "secrets", "shared", "egress", "provides", "uses"):
         out.setdefault(key, [])
     for job in out["jobs"]:
         job.setdefault("catch_up", "skip")

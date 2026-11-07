@@ -44,6 +44,11 @@ description: Prepares two-monthly GST returns from bank transactions for import 
 
 port: 8080                   # optional, default 8080
 ui: true                     # optional, default true; UI served under AGENTOS_BASE_PATH
+nav:                         # optional; the app's menu, shown in the AgentOS header (max 8)
+  - label: Orders
+    path: /                  # relative to the base path; a plain path, may include ?query
+  - label: Unmatched
+    path: /unmatched
 network: internet            # required: internet | none
 memory: 512m                 # optional, default 512m
 
@@ -112,6 +117,8 @@ Apps must:
   - `/connect/<scope>/*` requires a connection token granted for `<scope>` (§6)
   - everything else requires the header `X-AgentOS-Proxy-Token: $AGENTOS_TOKEN`, which the platform's proxy adds; answer `401` otherwise
 - only then trust `X-AgentOS-User` as the logged-in user; apps do no authentication of their own
+- **inside AgentOS, don't draw your own header or menu.** AgentOS shows the app in a frame under its own header, which renders the app name and the `nav:` items. When the request has `Sec-Fetch-Dest: iframe` (helper: `embedded(request)`), omit the app's own top bar/menu; when opened on its own, show it as usual
+- put the location script on every HTML page (helper: `NAV_SCRIPT`), so the AgentOS header highlights the current `nav:` item as the user navigates. It sends only the path, to the AgentOS origin, and does nothing outside a frame
 
 The Python helper does all of this: `platform.install(app)`.
 

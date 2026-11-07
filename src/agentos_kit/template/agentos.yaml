@@ -5,6 +5,11 @@ description: Minimal AgentOS app. Replace this description with what your app do
 
 network: none
 ui: true
+nav:                     # the app's menu, shown in the AgentOS header (paths under the base path)
+  - label: Home
+    path: /
+  - label: About
+    path: /about
 
 jobs:
   - id: say-hello

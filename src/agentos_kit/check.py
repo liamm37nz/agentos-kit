@@ -146,6 +146,11 @@ def check_live(base_url: str, token: str, manifest: dict[str, Any], *, timeout: 
             r = get(probe, headers={"X-AgentOS-Proxy-Token": token}, follow_redirects=True)
             if r is not None and r.status_code != 200:
                 err(f"UI: GET {probe} via the proxy expected 200, got {r.status_code} (serve the UI under AGENTOS_BASE_PATH)")
+            for item in manifest.get("nav", []):
+                path = f"/apps/{manifest['id']}{item['path']}"
+                r = get(path, headers={"X-AgentOS-Proxy-Token": token, "Sec-Fetch-Dest": "iframe"}, follow_redirects=True)
+                if r is not None and r.status_code != 200:
+                    err(f"nav '{item['label']}': GET {path} expected 200, got {r.status_code}")
 
     return findings
 

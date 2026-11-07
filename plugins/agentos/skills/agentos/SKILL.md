@@ -44,7 +44,7 @@ These come from the contract and the platform's security model. Do not trade the
 
 ## Before finishing any change to an app
 
-- [ ] `agentos.yaml` matches the code: jobs, secrets (also `REQUIRED_SECRETS` in Python apps), `network`, `egress`, `shared`, `provides`, `uses`
+- [ ] `agentos.yaml` matches the code: `nav` (the app's menu), jobs, secrets (also `REQUIRED_SECRETS` in Python apps), `network`, `egress`, `shared`, `provides`, `uses`
 - [ ] The vendored `agentos_platform.py` matches the installed kit's template, and the app calls `platform.install(app)`
 - [ ] `AGENTS.md` is current and under ~100 lines; `ARCHITECTURE.md` updated if the design changed; README run instructions work
 - [ ] Tests pass, including new behaviour
