@@ -59,6 +59,9 @@ def test_label_round_trip():
         ({"jobs": [{"id": "a1", "name": "A", "schedule": "0 9 * * MON"}]}, "unsupported value"),
         ({"memory": "512"}, "memory"),
         ({"nav": [{"label": "A", "path": "orders"}]}, "nav.0.path"),
+        ({"group": ""}, "group"),
+        ({"group": "<b>x</b>"}, "group"),
+        ({"group": "x" * 31}, "group"),
         ({"nav": [{"label": "A", "path": "//evil.example"}]}, "plain path"),
         ({"nav": [{"label": "A", "path": "/../x"}]}, "plain path"),
         ({"nav": [{"label": "A", "path": "/"}, {"label": "A", "path": "/x"}]}, "duplicate label"),
@@ -88,3 +91,9 @@ def test_provides_and_uses_defaults():
                                  uses=[{"app": "bank-sync", "scope": "transactions", "reason": "GST needs them"}]))
     assert mf.validate(m) == []
     assert m["uses"][0]["optional"] is False
+
+
+def test_group_is_optional_and_kept():
+    assert "group" not in mf.with_defaults(VALID)
+    assert mf.validate(variant(group="Personal")) == []
+    assert mf.validate(variant(group="R&D team")) == []

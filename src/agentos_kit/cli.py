@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("id", help="app id, e.g. gst")
     p.add_argument("--name", help="display name (default: from id)")
     p.add_argument("--dir", help="target directory (default: ./<id>)")
+    p.add_argument("--group", help="sidebar group in AgentOS, e.g. Personal (default: unset)")
 
     args = parser.parse_args(argv)
     return {"check": _check, "contract": _contract, "label": _label, "new": _new}[args.cmd](args)
@@ -88,6 +89,9 @@ def _new(args) -> int:
         print("error: id must be 2-40 chars of lowercase letters, digits and hyphens", file=sys.stderr)
         return 2
     name = args.name or args.id.replace("-", " ").title()
+    if args.group is not None and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 &._-]{0,29}", args.group):
+        print("error: group must be 1-30 letters, digits, spaces or & . _ -", file=sys.stderr)
+        return 2
     target = Path(args.dir or args.id)
     if target.exists() and any(target.iterdir()):
         print(f"error: {target} exists and is not empty", file=sys.stderr)
@@ -102,6 +106,8 @@ def _new(args) -> int:
             except UnicodeDecodeError:
                 continue
             new = text.replace(TEMPLATE_ID, args.id).replace(TEMPLATE_NAME, name)
+            if args.group and path.name == "agentos.yaml":
+                new = re.sub(r"^# group: .*$", f"group: {args.group}", new, count=1, flags=re.M)
             if new != text:
                 path.write_text(new)
     print(f"Created {target}/ — next: edit agentos.yaml and AGENTS.md, then `agentos check {target}`")

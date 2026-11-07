@@ -2,6 +2,7 @@ spec: agentos/v1
 id: template-app
 name: Template App
 description: Minimal AgentOS app. Replace this description with what your app does.
+# group: Personal        # optional sidebar group in AgentOS; ask the owner which (`agentos new --group`)
 
 network: none
 ui: true

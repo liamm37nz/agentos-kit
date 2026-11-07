@@ -46,6 +46,12 @@ def test_new_creates_a_passing_app(tmp_path, capsys):
     assert main(["check", str(root)]) == 0
 
 
+def test_new_with_group(tmp_path):
+    assert main(["new", "bloods", "--group", "Personal", "--dir", str(tmp_path / "b")]) == 0
+    assert mf.load(tmp_path / "b" / "agentos.yaml")["group"] == "Personal"
+    assert main(["new", "x2", "--group", "<bad>", "--dir", str(tmp_path / "c")]) == 2
+
+
 def test_new_rejects_bad_id(tmp_path):
     assert main(["new", "Bad_Id", "--dir", str(tmp_path / "x")]) == 2
 

@@ -41,6 +41,7 @@ spec: agentos/v1
 id: gst                      # lowercase, digits, hyphens; stable forever
 name: GST
 description: Prepares two-monthly GST returns from bank transactions for import into Xero.
+group: Personal              # optional; sidebar group in AgentOS (ask the owner which). Unset: the owner's default
 
 port: 8080                   # optional, default 8080
 ui: true                     # optional, default true; UI served under AGENTOS_BASE_PATH
