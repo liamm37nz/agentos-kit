@@ -97,3 +97,4 @@ def test_group_is_optional_and_kept():
     assert "group" not in mf.with_defaults(VALID)
     assert mf.validate(variant(group="Personal")) == []
     assert mf.validate(variant(group="R&D team")) == []
+    assert mf.validate(variant(group="Snowfox / LMAC")) == []
