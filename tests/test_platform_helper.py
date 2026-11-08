@@ -87,3 +87,16 @@ def test_embedded_and_nav_script():
     assert ap.embedded(req({"Sec-Fetch-Dest": "document"})) is False
     assert ap.embedded(req({})) is False
     assert 'type:"agentos:location"' in ap.NAV_SCRIPT and "window.parent===window" in ap.NAV_SCRIPT
+    # theme messages are accepted only from the parent frame on the AgentOS origin
+    assert 'd.type!=="agentos:theme"' in ap.NAV_SCRIPT and "e.source!==window.parent||e.origin!==o" in ap.NAV_SCRIPT
+
+
+def test_theme():
+    from starlette.requests import Request
+    def req(cookie):
+        return Request({"type": "http", "headers": [(b"cookie", cookie.encode())] if cookie else []})
+    assert ap.theme(req("agentos-theme=dark")) == "dark"
+    assert ap.theme(req("agentos-theme=light; other=1")) == "light"
+    assert ap.theme(req("agentos-theme=system")) == ""
+    assert ap.theme(req('agentos-theme="><script>')) == ""
+    assert ap.theme(req("")) == ""

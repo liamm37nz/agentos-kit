@@ -12,7 +12,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from .agentos_platform import NAV_SCRIPT, JobContext, Platform, embedded
+from .agentos_platform import JobContext, NAV_SCRIPT, Platform, embedded, theme
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -63,6 +63,17 @@ def ui_redirect() -> RedirectResponse:
     return RedirectResponse(BASE_PATH + "/")
 
 
+# Colours as variables: light by default, dark when AgentOS says so or (with no choice made) when the system is dark.
+_DARK = "--bg:#0f1216;--text:#e6e9ed;--line:#2a3038;--link:#7aa2ff;color-scheme:dark;"
+STYLE = f"""
+:root{{--bg:#fff;--text:#1b1f24;--line:#ddd;--link:#2457c5;color-scheme:light}}
+@media (prefers-color-scheme: dark){{:root:not([data-theme="light"]){{{_DARK}}}}}
+:root[data-theme="dark"]{{{_DARK}}}
+body{{font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem;line-height:1.5;background:var(--bg);color:var(--text)}}
+a{{color:var(--link)}}
+.own{{display:flex;gap:1rem;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:.5rem;margin-bottom:1rem}}"""
+
+
 def page(request: Request, title: str, body: str) -> str:
     """Wrap page content. Inside AgentOS the header and menu come from AgentOS (`nav:` in agentos.yaml),
     so the app's own header is only drawn when it's opened on its own."""
@@ -70,11 +81,12 @@ def page(request: Request, title: str, body: str) -> str:
   <strong>Template App</strong>
   <nav><a href="{BASE_PATH}/">Home</a> <a href="{BASE_PATH}/about">About</a></nav>
 </header>"""
+    scheme = theme(request)  # 'light' / 'dark' when picked in AgentOS, '' to follow the system
     return f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"{f' data-theme="{scheme}"' if scheme else ""}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>{html.escape(title)} · Template App</title>
-<style>body{{font-family:system-ui,sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem;line-height:1.5}}
-.own{{display:flex;gap:1rem;align-items:baseline;border-bottom:1px solid #ddd;padding-bottom:.5rem;margin-bottom:1rem}}</style>
+<style>{STYLE}</style>
 </head><body>
 {own_header}
 {body}

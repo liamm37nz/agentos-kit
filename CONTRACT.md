@@ -120,6 +120,8 @@ Apps must:
 - only then trust `X-AgentOS-User` as the logged-in user; apps do no authentication of their own
 - **inside AgentOS, don't draw your own header or menu.** AgentOS shows the app in a frame under its own header, which renders the app name and the `nav:` items. When the request has `Sec-Fetch-Dest: iframe` (helper: `embedded(request)`), omit the app's own top bar/menu; when opened on its own, show it as usual
 - put the location script on every HTML page (helper: `NAV_SCRIPT`), so the AgentOS header highlights the current `nav:` item as the user navigates. It sends only the path, to the AgentOS origin, and does nothing outside a frame
+- **follow the owner's colour scheme.** The owner picks light, dark or system in AgentOS; it's sent to the app as the cookie `agentos-theme` (helper: `theme(request)` → `'light'`, `'dark'` or `''`). Render it on the root element (`<html data-theme="dark">`, no attribute for `''`) and style dark mode for both `:root[data-theme="dark"]` and `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }`. The location script applies changes live while the app is open
+- don't read or depend on any other AgentOS cookie; the platform strips them before requests reach the app
 
 The Python helper does all of this: `platform.install(app)`.
 

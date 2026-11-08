@@ -15,6 +15,10 @@ Inside AgentOS the app is shown in a frame under the AgentOS header, which rende
 `nav:` in agentos.yaml. So when `embedded(request)` is true, don't draw your own header/menu; and put
 `NAV_SCRIPT` on every page so the AgentOS header highlights the right menu item as the user navigates.
 
+Colour scheme: the owner picks light, dark or system in AgentOS. Render `<html data-theme="{theme(request)}">`
+(omit the attribute when it's empty) and write dark styles for both `:root[data-theme="dark"]` and
+`@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }`. NAV_SCRIPT applies changes live.
+
 Job functions receive a JobContext and run in a background thread. Return a final
 message (or None) to succeed; raise to fail. Runs are kept in memory, so a restart
 forgets them and the platform records any in-flight run as failed.
@@ -186,9 +190,29 @@ def embedded(request: Request) -> bool:
     return request.headers.get("sec-fetch-dest", "").lower() == "iframe"
 
 
-# Include on every HTML page (e.g. just before </body>). Tells the AgentOS header which page is showing,
-# so it can highlight the matching `nav:` item. Sends only the path; does nothing when not in a frame.
-NAV_SCRIPT = """<script>(function(){if(window.parent===window)return;function s(){try{window.parent.postMessage({type:"agentos:location",path:location.pathname+location.search},location.protocol+"//"+location.hostname)}catch(e){}}s();window.addEventListener("popstate",s);})();</script>"""
+# Include on every HTML page (e.g. just before </body>). Tells the AgentOS header which page is showing, and
+# applies the owner's colour scheme when they change it in AgentOS. Talks only to the AgentOS origin (same host,
+# default port) and does nothing when the page isn't in a frame.
+NAV_SCRIPT = (
+    '<script>(function(){if(window.parent===window)return;var o=location.protocol+"//"+location.hostname;'
+    'function s(){try{window.parent.postMessage({type:"agentos:location",path:location.pathname+location.search},o)}catch(e){}}'
+    's();window.addEventListener("popstate",s);'
+    'window.addEventListener("message",function(e){if(e.source!==window.parent||e.origin!==o)return;var d=e.data;'
+    'if(!d||d.type!=="agentos:theme")return;var r=document.documentElement;'
+    'if(d.theme==="light"||d.theme==="dark")r.setAttribute("data-theme",d.theme);else r.removeAttribute("data-theme")});'
+    '})();</script>'
+)
+
+THEME_COOKIE = "agentos-theme"
+
+
+def theme(request: Request) -> str:
+    """The owner's colour scheme from AgentOS: 'light', 'dark', or '' to follow the system.
+
+    Put it on the root element — `<html data-theme="dark">` — and omit the attribute when it's ''.
+    """
+    value = request.cookies.get(THEME_COOKIE, "")
+    return value if value in ("light", "dark") else ""
 
 
 def caller(request: Request) -> str:

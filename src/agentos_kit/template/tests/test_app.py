@@ -95,3 +95,12 @@ def test_own_header_only_when_not_embedded(client):
 def test_nav_paths_exist(client):
     for item in MANIFEST.get("nav", []):
         assert client.get(BASE + item["path"], headers=PROXY).status_code == 200, item
+
+
+def test_follows_the_agentos_colour_scheme(client):
+    for value, expected in (("dark", '<html lang="en" data-theme="dark">'), ("light", '<html lang="en" data-theme="light">'),
+                            ("system", '<html lang="en">'), ("<x>", '<html lang="en">')):
+        client.cookies.set("agentos-theme", value)
+        assert expected in client.get(BASE + "/", headers=PROXY).text
+    client.cookies.clear()
+    assert '<html lang="en">' in client.get(BASE + "/", headers=PROXY).text
